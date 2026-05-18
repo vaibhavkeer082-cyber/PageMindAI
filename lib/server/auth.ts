@@ -44,7 +44,7 @@ export async function login(body: unknown) {
 }
 
 export function createSessionToken(user: SafeUser) {
-  return jwt.sign({ sub: user.id, email: user.email, plan: user.plan }, jwtSecret(), { expiresIn: "7d" });
+  return jwt.sign({ sub: user.id, email: user.email, plan: user.plan }, jwtSecret(), { expiresIn: "365d" });
 }
 
 export async function getCurrentUser(): Promise<SafeUser | null> {
@@ -67,7 +67,7 @@ export async function setSessionCookie(user: SafeUser) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7
+    maxAge: 60 * 60 * 24 * 365
   });
 }
 

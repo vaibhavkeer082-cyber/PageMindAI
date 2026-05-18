@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Brain, CheckCircle2, FileText, Loader2, Paperclip, Save, SendHorizontal, Sparkles } from "lucide-react";
 import type { AnalysisResult, UploadResponse } from "@/lib/types";
@@ -15,14 +15,7 @@ export function ResultClient({ uploadId }: { uploadId: string }) {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const cached = sessionStorage.getItem("pagemind:lastUpload");
-    if (cached) {
-      const parsed = JSON.parse(cached) as UploadResponse;
-      if (parsed.id === uploadId) setUpload(parsed);
-    }
-  }, [uploadId]);
+  const autoStarted = useRef(false);
 
   const metadata = useMemo(() => {
     if (!upload) return [];
@@ -34,14 +27,14 @@ export function ResultClient({ uploadId }: { uploadId: string }) {
     ];
   }, [upload]);
 
-  async function analyze() {
+  const analyze = useCallback(async (overrideInstruction?: string) => {
     setError("");
     setLoading(true);
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uploadId, customInstruction: instruction })
+        body: JSON.stringify({ uploadId, customInstruction: overrideInstruction ?? instruction })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Analysis failed.");
@@ -51,7 +44,26 @@ export function ResultClient({ uploadId }: { uploadId: string }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [instruction, uploadId]);
+
+  useEffect(() => {
+    const cached = sessionStorage.getItem("pagemind:lastUpload");
+    if (cached) {
+      const parsed = JSON.parse(cached) as UploadResponse;
+      if (parsed.id === uploadId) setUpload(parsed);
+    }
+    const initialInstruction = sessionStorage.getItem("pagemind:initialInstruction");
+    if (initialInstruction) setInstruction(initialInstruction);
+  }, [uploadId]);
+
+  useEffect(() => {
+    const shouldAutoAnalyze = new URLSearchParams(window.location.search).get("auto") === "1";
+    if (!shouldAutoAnalyze || autoStarted.current) return;
+    autoStarted.current = true;
+    const initialInstruction = sessionStorage.getItem("pagemind:initialInstruction") ?? "";
+    setInstruction(initialInstruction);
+    void analyze(initialInstruction);
+  }, [analyze]);
 
   return (
     <section className="grid gap-6 py-9 lg:grid-cols-[360px_1fr]">
@@ -120,8 +132,14 @@ export function ResultClient({ uploadId }: { uploadId: string }) {
           </div>
         ) : (
           <div className="space-y-5">
+            <OutputCard title="Flowchart" icon={<Brain size={18} />}>
+              <MermaidChart chart={result.flowchart} />
+            </OutputCard>
             <OutputCard title="Summary" icon={<Sparkles size={18} />}>
               <p className="text-sm leading-7 text-black/72">{result.summary}</p>
+            </OutputCard>
+            <OutputCard title="Mindmap" icon={<Brain size={18} />}>
+              <MindmapView items={result.mindmap} />
             </OutputCard>
             <OutputCard title="Key Points" icon={<CheckCircle2 size={18} />}>
               <ul className="grid gap-3">
@@ -129,12 +147,6 @@ export function ResultClient({ uploadId }: { uploadId: string }) {
                   <li key={point} className="rounded-2xl border-[1.5px] border-black bg-[#fbfaf5] p-3 text-sm text-black/74">{point}</li>
                 ))}
               </ul>
-            </OutputCard>
-            <OutputCard title="Flowchart" icon={<Brain size={18} />}>
-              <MermaidChart chart={result.flowchart} />
-            </OutputCard>
-            <OutputCard title="Mindmap" icon={<Brain size={18} />}>
-              <MindmapView items={result.mindmap} />
             </OutputCard>
             <OutputCard title="Simplified Explanation" icon={<Sparkles size={18} />}>
               <p className="text-sm leading-7 text-black/72">{result.simplified_explanation}</p>
