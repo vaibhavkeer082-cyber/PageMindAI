@@ -10,3 +10,11 @@ export function getSupabaseAdmin() {
     }
   });
 }
+
+export function getRequiredSupabaseAdmin() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.");
+  }
+  return supabase;
+}

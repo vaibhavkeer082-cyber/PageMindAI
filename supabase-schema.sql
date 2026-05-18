@@ -51,5 +51,9 @@ create index if not exists results_user_created_idx on results(user_id, created_
 create index if not exists logs_user_created_idx on logs(user_id, created_at desc);
 
 insert into storage.buckets (id, name, public)
-values ('uploads', 'uploads', false)
+values ('uploads', 'uploads', true)
 on conflict (id) do nothing;
+
+update storage.buckets
+set public = true
+where id = 'uploads';

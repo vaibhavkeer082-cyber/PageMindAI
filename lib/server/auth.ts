@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { createUser, findUserByEmail, findUserById } from "@/lib/server/storage";
+import { createUser, ensureUser, findUserByEmail, findUserById } from "@/lib/server/storage";
 import type { SafeUser, StoredUser } from "@/lib/types";
 
 const schema = z.object({
@@ -11,6 +11,13 @@ const schema = z.object({
 });
 
 const cookieName = "pagemind_token";
+const guestUser: StoredUser = {
+  id: "00000000-0000-0000-0000-000000000000",
+  email: "guest@pagemind.local",
+  passwordHash: "guest",
+  plan: "free",
+  createdAt: "2026-05-18T00:00:00.000Z"
+};
 
 function jwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -74,8 +81,8 @@ export async function setSessionCookie(user: SafeUser) {
 export async function requireUser() {
   const user = await getCurrentUser();
   if (user) return user;
-  const guestId = "guest";
-  return { id: guestId, email: "guest@pagemind.local", plan: "free" as const };
+  await ensureUser(guestUser);
+  return toSafeUser(guestUser);
 }
 
 function toSafeUser(user: StoredUser): SafeUser {

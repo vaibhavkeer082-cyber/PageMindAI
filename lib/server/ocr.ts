@@ -1,4 +1,3 @@
-import { readFile } from "fs/promises";
 import pdf from "pdf-parse";
 import { createWorker } from "tesseract.js";
 import type { OcrOutput } from "@/lib/types";
@@ -16,10 +15,9 @@ const subjects = [
   "Literature"
 ];
 
-export async function extractText(filePath: string, fileType: string): Promise<OcrOutput> {
+export async function extractText(fileBuffer: Buffer, fileType: string): Promise<OcrOutput> {
   if (fileType === "application/pdf") {
-    const buffer = await readFile(filePath);
-    const data = await pdf(buffer);
+    const data = await pdf(fileBuffer);
     const text = normalizeText(data.text);
     return {
       raw_text: text || "No selectable text was found in this PDF. OCR fallback should be connected for scanned PDFs.",
@@ -29,9 +27,9 @@ export async function extractText(filePath: string, fileType: string): Promise<O
   }
 
   if (fileType === "image/jpeg" || fileType === "image/png") {
-    const worker = await createWorker("eng");
+    const worker = await createWorker("eng", undefined, { cacheMethod: "none" });
     try {
-      const result = await worker.recognize(filePath);
+      const result = await worker.recognize(fileBuffer);
       const text = normalizeText(result.data.text);
       return {
         raw_text: text || "No readable text was detected in this image.",

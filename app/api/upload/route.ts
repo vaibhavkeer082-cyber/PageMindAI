@@ -2,17 +2,19 @@ import { NextResponse } from "next/server";
 import { extractText } from "@/lib/server/ocr";
 import { assertUploadAllowed } from "@/lib/server/rate-limit";
 import { requireUser } from "@/lib/server/auth";
-import { createUpload, ensureStorage, incrementUsage } from "@/lib/server/storage";
-import { saveTempFile, saveUploadFile } from "@/lib/server/file-storage";
+import { createUpload, incrementUsage } from "@/lib/server/storage";
+import { uploadFileToStorage } from "@/lib/server/file-storage";
 
 const allowedTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const maxUploadBytes = 10 * 1024 * 1024;
+
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
   try {
     const user = await requireUser();
     await assertUploadAllowed(user);
-    await ensureStorage();
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -24,24 +26,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Only PDF, JPG, and PNG files are supported." }, { status: 400 });
     }
 
-    if (file.size <= 0 || file.size > 10 * 1024 * 1024) {
+    if (file.size <= 0 || file.size > maxUploadBytes) {
       return NextResponse.json({ error: "File must be between 1 byte and 10MB." }, { status: 400 });
     }
 
     const id = crypto.randomUUID();
-    const extension = file.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "") || "upload";
-    const safeName = `${id}.${extension}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ocrFilePath = await saveTempFile(buffer, safeName);
-    const storedFilePath = await saveUploadFile(buffer, safeName, file.type);
+    if (!buffer.byteLength) {
+      return NextResponse.json({ error: "Uploaded file is empty." }, { status: 400 });
+    }
 
-    const ocr = await extractText(ocrFilePath, file.type);
+    const storedFile = await uploadFileToStorage(buffer, file.name, file.type, user.id);
+    const ocr = await extractText(buffer, file.type);
     const upload = {
       id,
       userId: user.id,
       fileName: file.name,
       fileType: file.type,
-      filePath: storedFilePath,
+      filePath: storedFile.publicUrl,
       status: "uploaded" as const,
       ocr,
       subjectDetected: ocr.subject_detected,
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
       fileName: upload.fileName,
       fileType: upload.fileType,
       status: upload.status,
+      fileUrl: storedFile.publicUrl,
       ocr: upload.ocr
     });
   } catch (error) {

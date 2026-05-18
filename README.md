@@ -18,7 +18,6 @@ HF_MODEL=mistralai/Mistral-7B-Instruct-v0.3
 
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-SUPABASE_UPLOAD_BUCKET=uploads
 
 FREE_UPLOADS_PER_DAY=5
 PAID_UPLOADS_PER_DAY=1000
@@ -41,7 +40,7 @@ That creates:
 - `results`
 - `usage`
 - `logs`
-- private `uploads` storage bucket
+- public `uploads` storage bucket
 
 ## AI Model
 

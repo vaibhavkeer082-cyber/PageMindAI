@@ -34,6 +34,7 @@ export type UploadResponse = {
   id: string;
   fileName: string;
   fileType: string;
+  fileUrl: string;
   status: UploadRecord["status"];
   ocr: OcrOutput;
 };
