@@ -1,0 +1,15 @@
+{
+  "users": [
+    {
+      "id": "e55ed360-0f15-497a-9ad2-bbfc35dd55c9",
+      "email": "vaibhavkeer082@gmail.com",
+      "passwordHash": "$2a$12$O2T8d1SK3uDN2dXhEtPVWuWdoDARBN4mfvWe2MXVBAMJipPdVShSG",
+      "plan": "free",
+      "createdAt": "2026-05-17T09:36:27.819Z"
+    }
+  ],
+  "uploads": [],
+  "results": [],
+  "usage": [],
+  "logs": []
+}
